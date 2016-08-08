@@ -3,6 +3,10 @@ use std::collections::HashSet;
 use std::io::{Read, BufReader, BufRead};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
+/// Represents a single cell on the board.
+/// Can be either Open (unsoved), Fixed (one
+/// of the cells set as part of the puzzle)
+/// or Maybe (a value currently being tried)
 enum Cell {
     Fixed(u8),
     Maybe(u8),
@@ -23,11 +27,13 @@ impl ToString for Cell {
     }
 }
 
+/// Used to store the puzzle's state
 struct Board {
     grid: [[Cell; 9]; 9]
 }
 
 impl Board {
+    /// Instantiates a new board.
     fn new(values: Vec<(usize, usize, u8)>) -> Self {
         let mut grid = [[Cell::Open; 9],
                         [Cell::Open; 9],
@@ -58,8 +64,12 @@ impl Board {
         }
     }
 
+    /// Gets all possible numbers for a cell, taking into account
+    /// the row, column, and box the cell resides in.
     fn get_possible(&self, x: usize, y: usize) -> HashSet<u8> {
         let mut nums: HashSet<u8> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9].into_iter().collect();
+
+        // Search across a row
         for x in 0..9 {
             match self.grid[y][x] {
                 Cell::Fixed(num) | Cell::Maybe(num) => {
@@ -68,6 +78,8 @@ impl Board {
                 Cell::Open => continue,
             }
         }
+
+        // Search across a column
         for y in 0..9 {
             match self.grid[y][x] {
                 Cell::Fixed(num) | Cell::Maybe(num) => {
@@ -76,6 +88,8 @@ impl Board {
                 Cell::Open => continue,
             }
         }
+
+        // Search across a box
         let grid_x = x / 3;
         let grid_y = y / 3;
         for y in 0 .. 3 {
@@ -92,6 +106,9 @@ impl Board {
         nums
     }
 
+    /// Parses a puzzle from an input source
+    /// This is expected to be ascii-encoded,
+    /// representing empty cells with spaces
     fn parse_puzzle<T: Read>(input: T) -> Self {
         let input = BufReader::new(input);
         let mut grid = [[Cell::Open; 9]; 9];
@@ -155,6 +172,8 @@ fn main() {
     }
 }
 
+/// Attempts to solve a sudoku board with backtrack
+/// brute-forcing.
 fn backtrack(board: Board, x: usize, y: usize) -> Option<Board> {
     let (next_x, next_y) = next_coords(x, y);
     if y == 9 {
@@ -178,6 +197,9 @@ fn backtrack(board: Board, x: usize, y: usize) -> Option<Board> {
     }
 }
 
+/// Increments a pair of coordinates.
+/// Adds 1 to the x, setting it back to 0 and incrementing
+/// y after x reaches 8
 fn next_coords(x: usize, y: usize) -> (usize, usize) {
     let mut y = y;
     let x = match x {
