@@ -1,0 +1,12 @@
+name: sudoku
+version: 0.2.0
+author: Rob Bolton <rob.a.bolton@gmail.com>
+about: Solves Sudoku puzzles.
+args:
+  - input:
+      short: i
+      long: input
+      value_name: input
+      takes_value: true
+      help: Sets the file to read puzzles from.
+      required: true

@@ -1,6 +1,6 @@
 use std::char::from_digit;
 use std::collections::HashSet;
-use std::io::{Read, BufReader, BufRead};
+use std::io::{BufRead, Lines};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 /// Represents a single cell on the board.
@@ -90,31 +90,33 @@ impl Board {
     /// Parses a puzzle from an input source
     /// This is expected to be ascii-encoded,
     /// representing empty cells with spaces
-    pub fn parse_puzzle<T: Read>(input: T) -> Self {
-        let input = BufReader::new(input);
+    pub fn parse_puzzle<B: BufRead>(mut lines: Lines<B>) -> Result<(Self, Lines<B>), &'static str> {
         let mut grid = [[Cell::Open; 9]; 9];
-        let mut y = 0;
 
-        for line in input.lines().take(9) {
+        for y in 0..9 {
             let mut x = 0;
-            for chr in line.unwrap().chars().into_iter() {
-                grid[y][x] = match chr {
-                    chr @ '1' ... '9' => {
-                        Cell::Fixed(chr as u32 as u8 - 48)
-                    },
-                    _ => {
-                        Cell::Open
-                    },
-                };
-                
-                x = x + 1;
+            if let Some(Ok(line)) = lines.next() {
+                for chr in line.chars().into_iter().take(9) {
+                    grid[y][x] = match chr {
+                        chr @ '1' ... '9' => {
+                            Cell::Fixed(chr as u32 as u8 - 48)
+                        },
+                        _ => {
+                            Cell::Open
+                        },
+                    };            
+                    x = x + 1;
+                }
+            } else {
+                return Err("Reached end of input.");
             }
-            y = y + 1;
         }
 
-        Board {
-            grid: grid,
-        }
+        // Read a blank line
+        lines.next();
+
+        let board = Board { grid: grid };
+        Ok((board, lines))
     }
 }
 
@@ -188,11 +190,15 @@ fn next_coords(x: usize, y: usize) -> (usize, usize) {
 
 
 #[cfg(test)]
+use std::io::BufReader;
+
 #[test]
 fn test_patch() {
-    let board = Board::new(
-        vec!((0, 0, 1))
-    ).patch(1, 0, Cell::Fixed(2));
+    let lines = BufReader::new("1\n\n\n\n\n\n\n\n\n".as_bytes()).lines();
+    let board = Board::parse_puzzle(lines)
+        .unwrap()
+        .0
+        .patch(1, 0, Cell::Fixed(2));
 
     assert_eq!(Cell::Fixed(1), board.grid[0][0]);
     assert_eq!(Cell::Fixed(2), board.grid[0][1]);
@@ -211,9 +217,11 @@ fn test_parse_puzzle() {
   182 947
 85   46  
 ";
+
+    let lines = BufReader::new(puzzle_str.as_bytes()).lines();
     
-    let puzzle = Board::parse_puzzle(puzzle_str.as_bytes());
-    assert_eq!(puzzle_str, puzzle.to_string());
+    let puzzle = Board::parse_puzzle(lines);
+    assert_eq!(puzzle_str, puzzle.unwrap().0.to_string());
 }
 
 #[test]
@@ -224,8 +232,7 @@ fn test_coords() {
 
 #[test]
 fn test_get_possible() {
-    let board = Board::parse_puzzle(
-" 23456789
+    let lines = BufReader::new(" 23456789
 2        
 3        
 4        
@@ -233,7 +240,9 @@ fn test_get_possible() {
 6        
 7        
 8        
-9        ".as_bytes());
+9        ".as_bytes()).lines();
+
+    let board = Board::parse_puzzle(lines).unwrap().0;
 
     let expected: HashSet<u8> = vec![1].into_iter().collect();
     assert_eq!(expected, board.get_possible(0, 0));
