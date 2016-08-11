@@ -1,5 +1,4 @@
 use std::char::from_digit;
-use std::collections::HashSet;
 use std::io::{BufRead, Lines};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -47,14 +46,14 @@ impl Board {
 
     /// Gets all possible numbers for a cell, taking into account
     /// the row, column, and box the cell resides in.
-    fn get_possible(&self, x: usize, y: usize) -> HashSet<u8> {
-        let mut nums: HashSet<u8> = vec![1, 2, 3, 4, 5, 6, 7, 8, 9].into_iter().collect();
-
+    fn get_possible(&self, x: usize, y: usize) -> Vec<u8> {
+        let mut nums: Vec<bool> = vec![true; 9];
+        
         // Search across a row
         for x in 0..9 {
             match self.grid[y][x] {
                 Cell::Fixed(num) | Cell::Maybe(num) => {
-                    nums.remove(&num);
+                    nums[(num - 1) as usize] = false;
                 },
                 Cell::Open => continue,
             }
@@ -64,7 +63,7 @@ impl Board {
         for y in 0..9 {
             match self.grid[y][x] {
                 Cell::Fixed(num) | Cell::Maybe(num) => {
-                    nums.remove(&num);
+                    nums[(num - 1) as usize] = false;
                 },
                 Cell::Open => continue,
             }
@@ -77,14 +76,24 @@ impl Board {
             for x in 0 .. 3 {
                 match self.grid[y + (grid_y * 3)][x + (grid_x * 3)] {
                     Cell::Fixed(num) | Cell::Maybe(num) => {
-                        nums.remove(&num);
+                        nums[(num - 1) as usize] = false;
                     },
                     Cell::Open => continue,
                 }      
             }
         }
 
-        nums
+        let mut ret_nums: Vec<u8> = Vec::with_capacity(9);
+        let mut n = 1;
+        for num in nums.into_iter() {
+            if num {
+                ret_nums.push(n);
+            }
+            
+            n += 1;
+        }
+
+        ret_nums
     }
 
     /// Parses a puzzle from an input source
